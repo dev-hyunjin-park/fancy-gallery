@@ -1,6 +1,12 @@
 import * as THREE from "three";
 import vertexShader from "../shaders/vertex.glsl?raw";
 import fragmentShader from "../shaders/fragment.glsl?raw";
+import ASScroll from "@ashthornton/asscroll";
+
+const asscroll = new ASScroll({
+  disableRaf: true,
+});
+asscroll.enable();
 
 export default function () {
   const renderer = new THREE.WebGLRenderer({
@@ -23,7 +29,10 @@ export default function () {
     0.1, // near
     100 // far
   );
-  camera.position.set(0, 0, 2);
+  camera.position.set(0, 0, 50);
+  camera.fov = Math.atan(canvasSize.height / 2 / 50) * (180 / Math.PI) * 2; // 시야각 계산
+
+  const imageRepository = [];
 
   const loadImages = async () => {
     const images = [...document.querySelectorAll("main .content img")];
@@ -44,8 +53,7 @@ export default function () {
     // mesh의 위치를 이미지의 위치로 이동시킨다
 
     const imageMeshes = images.map((image) => {
-      const { width, height, top, left } = image.getBoundingClientRect();
-      console.log(width, height, top, left);
+      const { width, height } = image.getBoundingClientRect();
       const material = new THREE.ShaderMaterial({
         vertexShader,
         fragmentShader,
@@ -54,6 +62,7 @@ export default function () {
       const geometry = new THREE.PlaneGeometry(width, height, 16, 16);
       const mesh = new THREE.Mesh(geometry, material);
 
+      imageRepository.push({ img: image, mesh });
       return mesh;
     });
     return imageMeshes;
@@ -70,10 +79,25 @@ export default function () {
     canvasSize.height = window.innerHeight;
 
     camera.aspect = canvasSize.width / canvasSize.height;
+    camera.fov = Math.atan(canvasSize.height / 2 / 50) * (180 / Math.PI) * 2;
     camera.updateProjectionMatrix();
 
     renderer.setSize(canvasSize.width, canvasSize.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  };
+
+  const retransform = () => {
+    imageRepository.forEach(({ img, mesh }) => {
+      const { width, height, top, left } = img.getBoundingClientRect();
+      const { width: originWidth } = mesh.geometry.parameters;
+      const scale = width / originWidth; // 얼마나 scale 되었는지를 구한다
+      mesh.scale.x = scale;
+      mesh.scale.y = scale;
+
+      // three.js와 html의 좌표체계가 다름. position 바꿔주기
+      mesh.position.y = canvasSize.height / 2 - height / 2 - top;
+      mesh.position.x = -canvasSize.width / 2 + width / 2 + left;
+    });
   };
 
   const addEvent = () => {
@@ -82,6 +106,10 @@ export default function () {
 
   const draw = () => {
     renderer.render(scene, camera);
+    retransform();
+
+    asscroll.update();
+
     requestAnimationFrame(() => {
       draw();
     });
