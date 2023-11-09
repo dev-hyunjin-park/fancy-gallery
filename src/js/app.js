@@ -21,6 +21,8 @@ export default function () {
     height: window.innerHeight,
   };
 
+  const textureLoader = new THREE.TextureLoader();
+
   const scene = new THREE.Scene();
   // 원근감을 표현할 수 있는 카메라
   const camera = new THREE.PerspectiveCamera(
@@ -53,14 +55,23 @@ export default function () {
     // mesh의 위치를 이미지의 위치로 이동시킨다
 
     const imageMeshes = images.map((image) => {
-      const { width, height } = image.getBoundingClientRect();
       const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uTexture: {
+            value: null, // 텍스처가 로드되기를 기다리지 않고 임시 할당
+          },
+        },
         vertexShader,
         fragmentShader,
         side: THREE.DoubleSide,
       });
+
+      const clonedMatarial = material.clone();
+      clonedMatarial.uniforms.uTexture.value = textureLoader.load(image.src);
+      const { width, height } = image.getBoundingClientRect();
+
       const geometry = new THREE.PlaneGeometry(width, height, 16, 16);
-      const mesh = new THREE.Mesh(geometry, material);
+      const mesh = new THREE.Mesh(geometry, clonedMatarial);
 
       imageRepository.push({ img: image, mesh });
       return mesh;
