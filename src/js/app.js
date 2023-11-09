@@ -2,6 +2,7 @@ import * as THREE from "three";
 import vertexShader from "../shaders/vertex.glsl?raw";
 import fragmentShader from "../shaders/fragment.glsl?raw";
 import ASScroll from "@ashthornton/asscroll";
+import gsap from "gsap";
 
 const asscroll = new ASScroll({
   disableRaf: true,
@@ -21,6 +22,7 @@ export default function () {
     height: window.innerHeight,
   };
 
+  const clock = new THREE.Clock();
   const textureLoader = new THREE.TextureLoader();
 
   const scene = new THREE.Scene();
@@ -59,6 +61,12 @@ export default function () {
         uniforms: {
           uTexture: {
             value: null, // 텍스처가 로드되기를 기다리지 않고 임시 할당
+          },
+          uTime: {
+            value: 0,
+          },
+          uHover: {
+            value: 0,
           },
         },
         vertexShader,
@@ -113,6 +121,22 @@ export default function () {
 
   const addEvent = () => {
     window.addEventListener("resize", resize);
+    imageRepository.forEach(({ img, mesh }) => {
+      img.addEventListener("mouseenter", () => {
+        gsap.to(mesh.material.uniforms.uHover, {
+          value: 1,
+          duration: 0.4,
+          ease: "power1.inOut",
+        });
+      });
+      img.addEventListener("mouseout", () => {
+        gsap.to(mesh.material.uniforms.uHover, {
+          value: 0,
+          duration: 0.4,
+          ease: "power1.inOut",
+        });
+      });
+    });
   };
 
   const draw = () => {
@@ -120,6 +144,9 @@ export default function () {
     retransform();
 
     asscroll.update();
+    imageRepository.forEach(({ img, mesh }) => {
+      mesh.material.uniforms.uTime.value = clock.getElapsedTime();
+    });
 
     requestAnimationFrame(() => {
       draw();
