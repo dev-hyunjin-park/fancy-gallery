@@ -12,6 +12,7 @@ asscroll.enable();
 export default function () {
   const renderer = new THREE.WebGLRenderer({
     alpha: true,
+    antialias: true,
   });
 
   const container = document.querySelector("#container");
@@ -22,6 +23,7 @@ export default function () {
     height: window.innerHeight,
   };
 
+  const raycaster = new THREE.Raycaster();
   const clock = new THREE.Clock();
   const textureLoader = new THREE.TextureLoader();
 
@@ -67,6 +69,12 @@ export default function () {
           },
           uHover: {
             value: 0,
+          },
+          uHoverX: {
+            value: 0.5,
+          },
+          uHoverY: {
+            value: 0.5,
           },
         },
         vertexShader,
@@ -114,12 +122,29 @@ export default function () {
       mesh.scale.y = scale;
 
       // three.js와 html의 좌표체계가 다름. position 바꿔주기
-      mesh.position.y = canvasSize.height / 2 - height / 2 - top;
       mesh.position.x = -canvasSize.width / 2 + width / 2 + left;
+      mesh.position.y = canvasSize.height / 2 - height / 2 - top;
     });
   };
 
   const addEvent = () => {
+    window.addEventListener("mousemove", (e) => {
+      // pointer는 마우스 위치 좌표를 -1과 1 사이의 값
+      const pointer = {
+        x: (e.clientX / canvasSize.width) * 2 - 1,
+        y: -(e.clientY / canvasSize.height) * 2 + 1,
+      };
+      raycaster.setFromCamera(pointer, camera);
+
+      const intersects = raycaster.intersectObjects(scene.children);
+
+      if (intersects.length > 0) {
+        let mesh = intersects[0].object;
+        mesh.material.uniforms.uHoverX.value = intersects[0].uv.x - 0.5;
+        mesh.material.uniforms.uHoverY.value = intersects[0].uv.y - 0.5;
+      }
+    });
+
     window.addEventListener("resize", resize);
     imageRepository.forEach(({ img, mesh }) => {
       img.addEventListener("mouseenter", () => {
