@@ -1,8 +1,13 @@
 import * as THREE from "three";
 import vertexShader from "../shaders/vertex.glsl?raw";
 import fragmentShader from "../shaders/fragment.glsl?raw";
+import postVertexShader from "../shaders/postprocessing/vertex.glsl?raw";
+import postFragmentShader from "../shaders/postprocessing/fragment.glsl?raw";
 import ASScroll from "@ashthornton/asscroll";
 import gsap from "gsap";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass";
 
 const asscroll = new ASScroll({
   disableRaf: true,
@@ -14,6 +19,9 @@ export default function () {
     alpha: true,
     antialias: true,
   });
+
+  // 이펙트를 관리하는 컴포저 객체
+  const composer = new EffectComposer(renderer);
 
   const container = document.querySelector("#container");
   container.appendChild(renderer.domElement);
@@ -109,6 +117,7 @@ export default function () {
     camera.fov = Math.atan(canvasSize.height / 2 / 50) * (180 / Math.PI) * 2;
     camera.updateProjectionMatrix();
 
+    composer.setSize(canvasSize.width, canvasSize.height);
     renderer.setSize(canvasSize.width, canvasSize.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   };
@@ -125,6 +134,31 @@ export default function () {
       mesh.position.x = -canvasSize.width / 2 + width / 2 + left;
       mesh.position.y = canvasSize.height / 2 - height / 2 - top;
     });
+  };
+
+  const addPostEffects = () => {
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    const customShader = {
+      uniforms: {
+        tDiffuse: {
+          value: null,
+        },
+        uTime: {
+          value: 0,
+        },
+      },
+      vertexShader: postVertexShader,
+      fragmentShader: postFragmentShader,
+    };
+
+    const customPass = new ShaderPass(customShader);
+    composer.addPass(customPass);
+
+    return {
+      customShader,
+    };
   };
 
   const addEvent = () => {
@@ -164,25 +198,30 @@ export default function () {
     });
   };
 
-  const draw = () => {
-    renderer.render(scene, camera);
+  const draw = (effects) => {
+    const { customShader } = effects;
+    composer.render();
+    // renderer.render(scene, camera);
     retransform();
 
     asscroll.update();
+    customShader.uniforms.uTime.value = clock.getElapsedTime();
+
     imageRepository.forEach(({ img, mesh }) => {
       mesh.material.uniforms.uTime.value = clock.getElapsedTime();
     });
 
     requestAnimationFrame(() => {
-      draw();
+      draw(effects);
     });
   };
 
   const initialize = async () => {
     await create();
+    const effects = addPostEffects();
     addEvent();
     resize();
-    draw();
+    draw(effects);
   };
 
   initialize().then();
