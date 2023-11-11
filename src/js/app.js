@@ -140,7 +140,7 @@ export default function () {
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
 
-    const customShader = {
+    const customShader = new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: {
           value: null,
@@ -151,7 +151,7 @@ export default function () {
       },
       vertexShader: postVertexShader,
       fragmentShader: postFragmentShader,
-    };
+    });
 
     const customPass = new ShaderPass(customShader);
     composer.addPass(customPass);
