@@ -1,5 +1,6 @@
 uniform sampler2D tDiffuse;
 uniform float uTime;
+uniform float uScrolling;
 
 varying vec2 vUv;
 
@@ -74,14 +75,30 @@ float snoise(vec2 v){
 }
 
 // 3. noise
+// void main(){
+//     vec2 newUV = vUv;
+//     float side = smoothstep(0.2, 0.0, newUV.y) + smoothstep(0.8, 1.0, newUV.y);
+//     float noise = snoise(newUV * 500.0 + uTime * 2.0);
+//     newUV.x -= side * 0.1 * noise;
+//     // newUV.x *= snoise(newUV * 500.0);
+//     vec4 tex = texture2D(tDiffuse, newUV);
+//     tex += noise;
+//     vec4 sideColor = vec4(0.0, 0.0, side, 1.0);
+
+//     gl_FragColor = tex;
+// }
+
+// 4. ghost
 void main(){
     vec2 newUV = vUv;
     float side = smoothstep(0.2, 0.0, newUV.y) + smoothstep(0.8, 1.0, newUV.y);
-    float noise = snoise(newUV * 500.0 + uTime * 2.0);
-    newUV.x -= side * 0.1 * noise;
-    // newUV.x *= snoise(newUV * 500.0);
-    vec4 tex = texture2D(tDiffuse, newUV);
-    tex += noise;
+    float noise = snoise(newUV + uTime);
+    float strenth = 0.1;
+    newUV += noise * strenth;
+
+    vec4 tex = texture2D(tDiffuse, vUv);
+    vec4 blending = texture2D(tDiffuse, newUV);
+    tex += blending * uScrolling;
     vec4 sideColor = vec4(0.0, 0.0, side, 1.0);
 
     gl_FragColor = tex;

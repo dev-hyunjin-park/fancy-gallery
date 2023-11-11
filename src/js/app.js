@@ -148,6 +148,9 @@ export default function () {
         uTime: {
           value: 0,
         },
+        uScrolling: {
+          value: 0,
+        },
       },
       vertexShader: postVertexShader,
       fragmentShader: postFragmentShader,
@@ -161,7 +164,24 @@ export default function () {
     };
   };
 
-  const addEvent = () => {
+  const addEvent = (effects) => {
+    const { customShader } = effects;
+
+    asscroll.on("update", ({ currentPos, targetPos }) => {
+      const speed = Math.abs(targetPos - currentPos); // Math.abs: 위로 스크롤 할 때엔 음수를 띄기때문에 절대값을 넘겨준다.
+      if (speed > 5) {
+        gsap.to(customShader.uniforms.uScrolling, {
+          value: 1,
+          duration: 0.5,
+        });
+      } else {
+        gsap.to(customShader.uniforms.uScrolling, {
+          value: 0,
+          duration: 0.5,
+        });
+      }
+    });
+
     window.addEventListener("mousemove", (e) => {
       // pointer는 마우스 위치 좌표를 -1과 1 사이의 값
       const pointer = {
@@ -219,7 +239,7 @@ export default function () {
   const initialize = async () => {
     await create();
     const effects = addPostEffects();
-    addEvent();
+    addEvent(effects);
     resize();
     draw(effects);
   };
